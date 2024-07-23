@@ -1,0 +1,29 @@
+Spray pattern using monster
+Free the monster
+Allocate an item
+Allocate an item
+Allocate an item
+Allocate an item
+Allocate an item and observe its field - is the pattern overriden? where?
+Allocate an item and observer its `next` field changed - when it is changed? where? why? IDA? bootlin?
+
+
+1:
+
+0-4	pointer to `top` bin in libc
+4-8	pointer to `top` bin in libc
+8-12	NULL (unknown)
+12-16	NULL (unknown)
+16-20	Pattern
+20-24	Top chunk updated size
+24-28	pointer to `top` bin in libc
+28-32	pointer to `top` bin in libc
+32-36	NULL (unknown)
+36-40	NULL (unknown)
+40-??	Pattern
+
+First 16 bytes overriden. First 8 bytes are pointers to 'top' bin, next 8 bytes are zero for some reason. 
+
+I attached an access breakpoint, and viewed the location in which that area changes. It happens in `_int_malloc` (see malloc/malloc.c: Ctrl + F + "bk_nextsize = NULL") when setting up the remainder. That remainder is a large block - and so its `fd_nextsize` and `bk_nextsize` fields are used - and so are set to NULL at block initialization.
+
+We could avoid that by making the remainder tiny. Namely - the check that's being done is `remainder_size > 511`. If so, those pointers are set to NULL. But if we would reach a remainder of 511 bytes or less, we're golden - making the 'next' field of the last element in the list point to wherever we want.

@@ -1,0 +1,9 @@
+flag:
+	mommy now I get what PATH environment is for :)
+
+Solution command:
+```
+./cmd1 "/bin/cat f*"
+```
+
+Solved using simple flow of trying stuff out.

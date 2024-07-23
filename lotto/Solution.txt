@@ -1,0 +1,1 @@
+This is rather simple. The count method is horrible. I just entered "!!!!!!", so that when '!' is picked, it will be matched 6 times against my 6 bytes. This reduced the problem to the chance a 1-in-45 number is picked exactly once among 6 numbers, which is way higher. I tries it a few times and on the 4th time it worked.

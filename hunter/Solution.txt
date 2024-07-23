@@ -1,0 +1,6 @@
+Flag:
+	byt3_gRanular1ty_R4ndom1zat10n_i5_P4in_In_tHe_AsS
+
+
+Full description of the relevant primitives and exploit logic can be found in the mind map `Get shell.xmind` (see "Final Exploit" and "Primitives").
+The exlpoit is under `Exploit-Dev/hunter_exploit.py`.

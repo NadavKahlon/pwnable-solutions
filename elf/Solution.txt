@@ -1,0 +1,30 @@
+Flag:
+	By_Exploiting_it_of_CouRse
+
+
+Well, this was one crazy adventure.
+
+So the mission is this: we have 25 queries for anywhere in the address space of a process, which loaded a shared object name `libflag.so`. This shared object is randomly generated with thousands of functions - and one golden function, which prints the flag.
+
+My initial efforts were by locating the function or related structures in some constant locations (or getting helper addresses which can be found at constant locations). It was kind of an "easy win" approach, but then I realiszed that I cannot trust the heap and similar structures to act the same on the remote server, whose specifications are completely hidden from us.
+
+So my next, long, effort - was to locate the function by traversing the standard structures - just like the dynamic loader itself. And indeed I spent a lot of time browsing its source to figure out what to do, as well as reversing the hashing mechanism for symbol lookup (which was essential, if I wanted to find anything among thousands of garbage functions) and getting struct members offsets directly from the compiled binary (such offsets are very difficult to extract from the source).
+
+The full flow, alongside a summary of my research conclusions, are documented in the attached mind map `Get the flag`. The attached script, `solver.py`, locates the flag function (with high probability, see below) and prints its first 128 bytes. The script can be run remotely, so no need to SSH - just `python` it and get the function. 
+
+In summary, the solution's flow is as follows:
+
+1. Use the constant address in the python ELF (which is not relocated!) containing the GOT entry of `dlopen`, to locate `libdl.so`.
+2. Use the constant offset in `libdl.so` of `_rtld_global_ptr` to locate `_rtld_global` (which is, by the way, in `ld.so`)
+3. One of the members in `_rtdl_global` is a pointer to the `struct link_map` associated with the python ELF interperter (if I remember correctly, this is ld.so, but it doesn't matter).
+4. In the list of all `struct link_map` objects associated with all loaded modules, `libflag.so` is 5 entries ahead (heuristic!). Traverse to it.
+5. Now that we have the `struct link_map` of `libflag.so`, we look for our symbol - `yes_ur_flag` - in its hash table. We find its bucket by:
+	a. Getting the number of buckets from the `struct link_map`
+	c. Calculating the bucket index by modulo-ing the symbol's hash and the number of buckets
+	b. Getting the location of the buckets array from the `struct link_map`
+	d. Getting the bucket found in the corresponding entry in the array
+6. The extracted bucket is the index of the first symbol in the bucket. In my monitored tests, `yes_ur_flag` was the *second* symbol in the bucket, and it also worked when running in field, so I use this heuristic as a shortcut. *It may be wrong on future generations of `libflag.so`*, in such cases - just play with `symidx` in the script (it may be `bucket`, `bucket+1`, `bucket+2`... One of them will probably work). So to summarize - we have the symbol index of `yes_ur_flag`
+7. Get a pointer to the loaded `symtab` section of `libflag.so` (the `struct link_map` points to the `Dyn` entry associated with the `symtab` section; we find it, extract it value, and relocate it based on the laod address of the `.so` - which is also pointed to by the `struct link_map`)
+8. Go to the `symtab` array entry associated with the symbol index of `yes_ur_flag` found before, and extract its value, thus getting the value of the `yes_ur_flag` symbol.
+9. That value is the required function's address - just dump it with a few queries.
+10. The printed flag is not taken from another section (like the `.rodata` section), but rather loaded to stack in chunks of 8 bytes, which are immediates hardcoded into the function's opcode. So no further traversal is necessary - we just disassemble the function, collect the immediate values loaded to stack by its opcodes, concatenate their bytes, and get the printed flag :)

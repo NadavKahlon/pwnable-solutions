@@ -1,0 +1,5 @@
+The issue is that the result of "open(urandom..,...) < 0" is assigned to fd, meaning that fd is now 0 - i.e. stdin. Thus the real password is read from stdin.
+So I entered:
+1111111111
+0000000000
+So my password 0000000000 is compared against 1111111111 after XOR-ing its bytes with 1, making them equal.

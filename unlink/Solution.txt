@@ -1,0 +1,30 @@
+Flag:
+	conditional_write_what_where_from_unl1nk_explo1t
+
+
+This is a diagram describing the heap exploitation:
+
+========================================================================================
+	Address			Meaning		What to Write
+----------------------------------------------------------------------------------------
+	heap_leak		A.fd
+	heap_leak+0x04		A.bk
+gets->	heap_leak+0x08		A.buff		&shell
+	heap_leak+0x0c				?
+	heap_leak+0x10		metadata	?
+	heap_leak+0x18		B.fd		heap_leak+0x0c
+	heap_leak+0x1c		B.bk		stack_leak+0x10 (= &var_4)
+	heap_leak+0x20		B.buff
+	heap_leak+0x28		metadata
+	heap_leak+0x30		C.fd
+	heap_leak+0x34		C.bk
+	heap_leak+0x38		C.buff
+	heap_leak+0x40		C.metadata
+	heap_leak+0x48		...
+========================================================================================
+
+`var_4` is some local variable used for some reason within `main` (not sure why; you can see it in IDA). It practically contains the stack pointer, before the `call` opcode to `main`. before `main` returns, the program executes:
+	$esp = var_4-4
+	ret (jump to $esp)
+
+The above writing to `A.buff` ensures that after unlink, `var_4-4` will point to `heap_leak+0x08`, which contains the address of `shell`. The following jump, gives us shell.

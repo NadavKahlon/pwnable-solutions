@@ -1,0 +1,36 @@
+I started with `gdb`-ing, looking for the base address of `libflag.so` in the *heap* (under the assumption that as python is interpreted, space is allocated in the heap for the relevant values; alternatively, the dynamic loader may use the heap to create a `struct` assocaiated the loaded `so`, which will include - among other information - the base address of the loaded `so`s).
+
+I got 2 loactions containing that address (consistently among 2 gdb runs):
+* heap + 0xa1b80
+* heap + 0xa1ec0
+
+
+
+~~~~~~~~~~~~~~~~~~~
+# elf.py:
+
+In probability of 1 to 10:
+	execute gen.py
+	sleep for 1 second
+
+Setup to exit in 10 seconds
+
+25 times:
+	addr = hex number provided by user
+	Write to standard output 32 bytes from that address
+
+~~~~~~~~~~~~~~~~~~~
+# gen.py:
+# Creates a shared object
+
+1. Write `./libflag.c` file:
+	1.1. Generate thousands `not_my_flag#` functions, printing `not a flag!`
+	1.2. Generate `yes_ur_flag` function printing the flag found in `flag` file (hardcoded into the source code, and the binary)
+	1.3. Generate thousands `not_your_flag#` functions, printing `not a flag!`
+2. Compile it to `./libflag.so`:
+	2.1 Position Independent Code
+	2.2 Shared object
+
+7f ff f5 e9 10 00
+
+0x00, 0x10, 0xe9, 0xf5, 0xff, 0x7f

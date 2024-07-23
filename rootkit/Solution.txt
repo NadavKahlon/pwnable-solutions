@@ -1,0 +1,14 @@
+Flag:
+	Rootkitty Sweety Kitty :)
+
+So a rootkit was installed, which hooks all system calls we can use to gain access to the flag file. The solution was to install a rootkit that fixes enough issues to let us access it (namely - use `open` and `openat` on the flag file). We can create such a rootkit, as we work in an environment where symbols seemed to be at constant locations between runs. We just look for the corresponding `sys_*` and install them back on the syscall table (which is also in a constant location).
+
+Seems easy enough. However - I could not compile kernel modules easily in that machine, as it is very minimalistic (it doesn't have many instructions installed, including `make`). So it was an issue. My solution was to patch the existing rootkit in shell. I had to:
+* Patch each hook installation instruction - so that instead of `mov`ing their hook address, I `mov` the original true `sys_*` function.
+* Patch the kernel module name in the binary itself, so that it won't conflict with `rootkit` (each LKM is identified by that name, and we can't load 2 LKMs with the same name)
+* Patch the relocations associated with the hook functions, since each had a relocation entry for its installation instruction (which we patched)
+
+Most of the work was making this happen. It required a lot of diving into binary and finding stuff manually (didn't want to spend my 30-day trial of 010-editor...). Then I needed to formulate basic shell instructions to make it happen. All are summarized at `make_purkit.sh`, alongside explanations of the binary patches.
+
+
+Finally, the flag itself is zipped with (it is not `flag`, but rather `flag.tar.gz`), so I needed to unzip before reading (in fact, I did not know it was zipped - it was my hypothesis, but I "brought it home" using hexdump on the remote machine, and some python parsing).

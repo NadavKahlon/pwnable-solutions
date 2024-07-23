@@ -1,0 +1,12 @@
+flag:
+	i have a pocket protector prot3ctor pr0tect0r!
+
+So there's a backdoor: if you go down to [x,y]=[8,14] at level 5 and ebove, and enter the string "OPENSESAMII", the wall below you is opened.
+
+This allows me to advance `player_x` and `player_y` beyond the limits of the limits of the `game_map` matrix, and as I jump around and the '0' char is written behind me - I am capable of writing this value to other locations, not just the `game_map` matrix.
+
+I jump around to the address associated with the index of the current round (without overriding anything critical), re-write it with 48 ('0'), jump back, win the 5th round, and win the whole game.
+
+Finally, I exploit a buffer overflow at `record_win` to jump to `shell`.
+
+`solver.py` provides the whole exploit, and directly give you shell.

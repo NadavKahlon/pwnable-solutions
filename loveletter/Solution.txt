@@ -1,0 +1,16 @@
+Flag:
+	1_Am_3t3rn4l_L0veR
+
+
+Enter the following line as your lover's name (note that it may look like more than one line in the app you view this text with):
+```
+sh                                                                                                                                                                                                                                                  /tmp/ggg/`
+```
+As a result, the batch file at /tmp/ggg/♥ will be executed - set it up with whatever you want (I filled it with the string "bash", to execute a bash shell).
+
+How does it work? Well, the string is 254 bytes long and lies within a 256-bytes long buffer. So while the program replaces each illegal character with a heart, which is 3 bytes, the resulting string fills up the buffer - and the terminating '\0' overflows into the first byte of the variable representing the prolog length (which is 13 initially). This is zeroed out and no prolog is added - our string comes up first. The '`' is replaced by the heart, the epilog is added (and regarded as arguments to the batch file), and the executed line ends up being equivalent to:
+```
+sh /tmp/ggg/♥ very much!
+```
+
+To avoid using to set up a file of your own, you could directly use "cat flag" and the epilog will just not be `cat`ed.

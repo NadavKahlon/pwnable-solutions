@@ -1,0 +1,36 @@
+# Any code logical address -> -0x08000000 +0x60 -> File offset
+
+cp rootkit.ko purekit.ko
+
+# Patch `open` hook installation
+# 	Loading sys_call_table[__NR_open] at 0x08000339
+# 	0x399 = 921
+# 	sys_open = 0C1158D70h
+# 	Patched mov instruction: C7 40 14 70 8D 15 C1
+printf "\xC7\x40\x14\x70\x8D\x15\xC1" > mov_sys_open
+dd if=mov_sys_open of=purekit.ko obs=1 seek=921 conv=notrunc
+
+# Patch `openat` hook installation
+# 	Loading sys_call_table[__NR_openat] at 0x08000340
+# 	0x3a0 = 928
+# 	sys_openat = 0C1158DB0h
+# 	Patched mov instruction: C7 80 9C 04 00 00 B0 8D 15 C1
+printf "\xC7\x80\x9C\x04\x00\x00\xB0\x8D\x15\xC1" > mov_sys_openat
+dd if=mov_sys_openat of=purekit.ko obs=1 seek=928 conv=notrunc
+
+# Patch kernel module name
+# 	"rootkit" string at 0x5ec
+# 	0x5ec = 1516
+echo "purekit" > name_purekit
+dd if=name_purekit of=purekit.ko obs=1 seek=1516 conv=notrunc
+
+# Patch `sys_open_hooked' and 'sys_openat_hooked' reloactions
+#	`sys_open_hooked` relocation entry is at offset 0x11f4 (=4596)
+#	`sys_openat_hooked` relocation entry is at offset 0x11fc (=4604)
+#	Those offsets contain the offsets into the `.init.text` section to patch (little endian)
+#	We override those offsets with 0x100, as the remaining of the _segment_ is not that big.
+printf "\x00\x03\x00\x00" > val_100h
+dd if=val_100h of=purekit.ko obs=1 seek=4596 conv=notrunc
+dd if=val_100h of=purekit.ko obs=1 seek=4604 conv=notrunc
+
+# Now you can `insmod` freely :)

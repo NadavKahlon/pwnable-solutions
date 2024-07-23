@@ -1,0 +1,5 @@
+A simple binary search client.
+It was kinda slow, so I ran it with locahost from inside the pwnable.kr server.
+
+Flag:
+b1NaRy_S34rch1nG_1s_3asy_p3asy

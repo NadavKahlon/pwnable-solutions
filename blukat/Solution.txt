@@ -1,0 +1,9 @@
+Flag:
+	Pl3as_DonT_Miss_youR_GrouP_Perm!!
+
+So we actually have group permissions for `blukat_pwn` (run `id` and see it for yourself), meaning we can read the password file. But don't be confused, the password actually contains the string:
+"cat: password: Permission denied"
+
+(I actually discovered it by gdb-ing `blukat`, but for some reason I managed to set $eip to whatever I want and it worked. I then got the flag - which hinted to me why I managed to do that thing. So I went on a short journy to understand the pwn, even though I "solved it").
+
+(Yeah, the buffer overflow is a crazy red-herring).
